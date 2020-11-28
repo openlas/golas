@@ -1,0 +1,44 @@
+
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.15.2"
+      - name: Install dependencies
+        run: |
+          go version
+          go get -u golang.org/x/lint/golint
+      - name: Run build
+        run: |
+          go build .
+      - name: Run vet & lint
+        run: |
+          go vet .
+          golint .
+      - name: Checkout
+        uses: actions/checkout@v2
+        id: "test"
+      - name: Run tests
+        run: |
+          go test -run ^Test.*$
+      - name: Run benchmark
+        run: |
+          go test -bench BenchmarkTest -run ^BenchmarkTest$
+      # - name: Convert coverage to lcov
+      #   uses: jandelgado/gcov2lcov-action@v1.0.4
+      #   with:
+      #       infile: coverage.out
+      #       outfile: coverage.lcov
+      # - name: Coveralls
+      #   uses: coverallsapp/github-action@v1.0.1
+      #   with:
+      #       github-token: ${{ secrets.github_token }}
+      #       path-to-lcov: coverage.lcov
