@@ -27,7 +27,7 @@ package main
 
 import (
 	"os"
-	"github.com/oze4/golas"
+	"github.com/openlas/golas"
 )
 
 func main() {
