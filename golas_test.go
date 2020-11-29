@@ -3,7 +3,7 @@ package golas
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	// "os"
 	"testing"
 )
 
@@ -16,8 +16,8 @@ func TestHelloWorld(t *testing.T) {
 }
 
 func BenchmarkTest(b *testing.B) {
-	lasReader, _ := os.Open("samples/unwrapped.las")
-	Parse(lasReader)
+	// lasReader, _ := os.Open("samples/unwrapped.las")
+	// Parse(lasReader)
 }
 
 func prettyPrintStructAsJSON(v interface{}) {
