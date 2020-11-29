@@ -74,7 +74,8 @@ func (l *Lexer) step() {
 	switch ch {
 	case '\n':
 		l.line++
-		l.position, l.dots = 0, 0
+		l.position = 0
+		l.dots = 0
 	case '.':
 		l.dots = l.dots + 1
 	}
@@ -83,10 +84,16 @@ func (l *Lexer) step() {
 	l.char = ch
 }
 
-// stepUntil reads from current line position until we read a certain rune
-func (l *Lexer) stepUntil(char rune) {
-	for l.char != char {
+// stepUntil reads from current line position until we read one of the specified runes
+func (l *Lexer) stepUntil(oneOfChars ...rune) {
+Loop:
+	for {
 		l.step()
+		for i := 0; i < len(oneOfChars); i++ {
+			if l.char == oneOfChars[i] {
+				break Loop
+			}
+		}
 	}
 }
 

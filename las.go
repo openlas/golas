@@ -6,7 +6,8 @@ import (
 
 // LAS represents a .las file
 type LAS struct {
-	Sections []Section
+	Sections  []Section
+	ASCIILogs LogData
 }
 
 // IsWrapped returns whether or not the las file is wrapped
@@ -52,7 +53,10 @@ type Line struct {
 }
 
 // LogData represents a row in the ASCII Log Data section ('~A')
-type LogData []interface{}
+type LogData struct {
+	Headers []string
+	Rows    [][]string
+}
 
 // Section represents a .las file section
 type Section struct {

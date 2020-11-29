@@ -12,9 +12,10 @@ func Parse(r io.Reader) *LAS {
 	var line Line
 	var token Token
 	las := &LAS{}
+	// logs := Logs{}
 	lexer := NewLexer(r)
 
-	lexer.Start(HandleBegin)
+	lexer.Start(handleBegin)
 
 	for {
 		token = lexer.NextToken()
@@ -30,8 +31,7 @@ func Parse(r io.Reader) *LAS {
 			}
 			section = &Section{Name: token.Value}
 		case TASCIILogData:
-			las.Sections = append(las.Sections, *section)
-			return las
+			lexASCIILogs(&lexer, las)
 		case TMnemonic:
 			line = Line{Mnem: token.Value}
 		case TUnits:
@@ -49,22 +49,38 @@ func Parse(r io.Reader) *LAS {
 	return las
 }
 
-// HandleBegin is a state function
-func HandleBegin(lexer *Lexer) HandlerFunc {
-	if lexer.char == '~' {
-		return HandleSection
-	} else if lexer.char == '#' {
-		return HandleComment
-	} else if lexer.char == '.' {
-		return HandleMnemonic
-	} else {
-		lexer.step()
-		return HandleBegin
+func lexASCIILogs(lexer *Lexer, las *LAS) {
+	for {
+		lexer.stepUntil('\n', -1, '~')
+		if lexer.char != '\n' {
+			break
+		}
+
+		las.ASCIILogs.Rows = append(
+			las.ASCIILogs.Rows,
+			// strings.Fields will not add empty strings to slice during Split
+			// (it natively splits a string using a space as separater)
+			strings.Fields(strings.TrimSpace(lexer.buffer.String())),
+		)
 	}
 }
 
-// HandleSection lexes a section
-func HandleSection(lexer *Lexer) HandlerFunc {
+// handleBegin is a state function
+func handleBegin(lexer *Lexer) HandlerFunc {
+	if lexer.char == '~' {
+		return handleSection
+	} else if lexer.char == '#' {
+		return handleComment
+	} else if lexer.char == '.' {
+		return handleMnemonic
+	} else {
+		lexer.step()
+		return handleBegin
+	}
+}
+
+// handleSection lexes a section
+func handleSection(lexer *Lexer) HandlerFunc {
 	if lexer.position != 1 {
 		panic(fmt.Errorf("invalid las file section : tilde not first character on line : line %d : position %d", lexer.line+1, lexer.position))
 	}
@@ -84,7 +100,7 @@ func HandleSection(lexer *Lexer) HandlerFunc {
 		s = "Curve Information"
 		t = TCurveInformation
 	case 'A':
-		s = "ASCII Log Data"
+		s = "ASCII Logs"
 		t = TASCIILogData
 	case 'P':
 		s = "Parameter Information"
@@ -98,58 +114,62 @@ func HandleSection(lexer *Lexer) HandlerFunc {
 
 	lexer.stepUntil('\n')
 	// If not custom section, use hard coded string as name
-	if t != TSectionCustom {
+	if t != TSectionCustom && s != "" {
 		lexer.overwriteBuffer(s)
 	}
 	lexer.emit(t)
-	return HandleMnemonic
+	return handleMnemonic
 }
 
-// HandleComment lexes a comment within a line
-func HandleComment(lexer *Lexer) HandlerFunc {
+// handleComment lexes a comment within a line
+func handleComment(lexer *Lexer) HandlerFunc {
 	for lexer.char != '\n' {
 		lexer.step()
 	}
 	lexer.emit(TComment)
-	return HandleBegin
+	return handleBegin
 }
 
-// HandleMnemonic lexes a mnemonic within a non-ascii log data line
-func HandleMnemonic(lexer *Lexer) HandlerFunc {
+// handleMnemonic lexes a mnemonic within a non-ascii log data line
+func handleMnemonic(lexer *Lexer) HandlerFunc {
 	// Mnemonic only valid if it is the first dot on a line
 	if lexer.dots == 1 {
 		lexer.truncate()
 		lexer.emit(TMnemonic)
-		return HandleUnits
+		return handleUnits
 	}
-	return HandleBegin
+	return handleBegin
 }
 
-// HandleUnits lexes units within a non-ascii log data line
-func HandleUnits(lexer *Lexer) HandlerFunc {
+// handleUnits lexes units within a non-ascii log data line
+func handleUnits(lexer *Lexer) HandlerFunc {
 	for lexer.char != ' ' {
 		lexer.step()
 	}
 	lexer.truncate()
 	lexer.emit(TUnits)
-	return HandleLineData
+	return handleLineData
 }
 
-// HandleLineData lexes data within a non-ascii log data line
-func HandleLineData(lexer *Lexer) HandlerFunc {
+// handleLineData lexes data within a non-ascii log data line
+func handleLineData(lexer *Lexer) HandlerFunc {
 	for lexer.char != ':' {
 		lexer.step()
 	}
 	lexer.truncate()
 	lexer.emit(TData)
-	return HandleDescription
+	return handleDescription
 }
 
-// HandleDescription lexes a description within a non-ascii log data line
-func HandleDescription(lexer *Lexer) HandlerFunc {
+// handleDescription lexes a description within a non-ascii log data line
+func handleDescription(lexer *Lexer) HandlerFunc {
 	for lexer.char != '\n' {
 		lexer.step()
 	}
 	lexer.emit(TDescription)
-	return HandleBegin
+	return handleBegin
 }
+
+//func handleASCIILogData(lexer *Lexer) HandlerFunc {
+//
+//}

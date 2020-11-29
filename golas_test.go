@@ -8,8 +8,10 @@ import (
 )
 
 func TestHelloWorld(t *testing.T) {
-	lasReader, _ := os.Open("samples/unwrapped.las")
-	_ = Parse(lasReader)
+	return
+	// lasReader, _ := os.Open("samples/1.las")
+	// las := Parse(lasReader)
+	// prettyPrintStructAsJSON(las)
 	// prettyPrintStructAsJSON(las)
 }
 
