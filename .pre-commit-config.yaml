@@ -3,9 +3,4 @@ repos:
   rev: master
   hooks:
     - id: go-fmt
-    - id: go-vet
-    - id: go-lint
-    - id: go-imports
-    - id: no-go-testing
-    - id: go-build
     - id: go-mod-tidy
