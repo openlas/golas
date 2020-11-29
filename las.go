@@ -30,7 +30,7 @@ func (las *LAS) IsWrapped() bool {
 			break
 		}
 	}
-	return strings.ToLower(las.wrap) == "yes"
+	return las.IsWrapped()
 }
 
 // Version returns the las file version

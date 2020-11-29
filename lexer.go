@@ -38,7 +38,7 @@ func (l *Lexer) NextToken() Token {
 			return token
 		default:
 			if l.handler == nil {
-				panic("private field `Lexer.handler` is nil : unable to acquire token without state")
+				panic("lexer not running : lexer.handler is nil : did you forget to call `lexer.Run(...)`?")
 			}
 			l.handler = l.handler(l)
 		}
