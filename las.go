@@ -14,19 +14,20 @@ type LAS struct {
 
 // IsWrapped returns whether or not the las file is wrapped
 func (las *LAS) IsWrapped() bool {
-	if las.wrap == "" {
-		for s := range las.Sections {
-			if strings.ToLower(las.Sections[s].Name) == "version information" {
-				for l := range las.Sections[s].Lines {
-					if strings.ToLower(las.Sections[s].Lines[l].Mnem) == "wrap" {
-						las.wrap = las.Sections[s].Lines[l].Data
-						break
-					}
+	if las.wrap != "" {
+		return strings.ToLower(las.wrap) == "yes"
+	}
+	for s := range las.Sections {
+		if strings.ToLower(las.Sections[s].Name) == "version information" {
+			for l := range las.Sections[s].Lines {
+				if strings.ToLower(las.Sections[s].Lines[l].Mnem) == "wrap" {
+					las.wrap = las.Sections[s].Lines[l].Data
+					break
 				}
 			}
-			if las.wrap != "" {
-				break
-			}
+		}
+		if las.wrap != "" {
+			break
 		}
 	}
 	return strings.ToLower(las.wrap) == "yes"
