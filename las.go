@@ -8,40 +8,49 @@ import (
 type LAS struct {
 	Sections  []Section
 	ASCIILogs LogData
+	version   string
+	wrap      string
 }
 
 // IsWrapped returns whether or not the las file is wrapped
 func (las *LAS) IsWrapped() bool {
-	var wrapped bool
-	for sectionIndex := range las.Sections {
-		if strings.ToLower(las.Sections[sectionIndex].Name) == "version information" {
-			for lineIndex := range las.Sections[sectionIndex].Lines {
-				if strings.ToLower(las.Sections[sectionIndex].Lines[lineIndex].Mnem) == "wrap" {
-					wrapped = strings.ToLower(las.Sections[sectionIndex].Lines[lineIndex].Data) == "yes"
-					goto Done
+	if las.wrap == "" {
+		for s := range las.Sections {
+			if strings.ToLower(las.Sections[s].Name) == "version information" {
+				for l := range las.Sections[s].Lines {
+					if strings.ToLower(las.Sections[s].Lines[l].Mnem) == "wrap" {
+						las.wrap = las.Sections[s].Lines[l].Data
+						break
+					}
 				}
+			}
+			if las.wrap != "" {
+				break
 			}
 		}
 	}
-Done:
-	return wrapped
+	return strings.ToLower(las.wrap) == "yes"
 }
 
 // Version returns the las file version
 func (las *LAS) Version() string {
-	var result string
-	for sectionIndex := range las.Sections {
-		if strings.ToLower(las.Sections[sectionIndex].Name) == "version information" {
-			for lineIndex := range las.Sections[sectionIndex].Lines {
-				if strings.ToLower(las.Sections[sectionIndex].Lines[lineIndex].Mnem) == "vers" {
-					result = las.Sections[sectionIndex].Lines[lineIndex].Data
-					goto Done
+	if las.version != "" {
+		return las.version
+	}
+	for s := range las.Sections {
+		if strings.ToLower(las.Sections[s].Name) == "version information" {
+			for l := range las.Sections[s].Lines {
+				if strings.ToLower(las.Sections[s].Lines[l].Mnem) == "vers" {
+					las.version = las.Sections[s].Lines[l].Data
+					break
 				}
 			}
 		}
+		if las.version != "" {
+			break
+		}
 	}
-Done:
-	return result
+	return las.version
 }
 
 // Line represents a header line in a .las file section
