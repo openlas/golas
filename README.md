@@ -1,10 +1,8 @@
 # golas
 
-**Parse geophysical well logs (.las files) in Golang**
-
 ![Build](https://github.com/openlas/golas/workflows/Build/badge.svg)
 
-- *Supported LAS Versions*:
+## Supported LAS Versions
   - [2.0](http://www.cwls.org/wp-content/uploads/2014/09/LAS_20_Update_Jan2014.pdf)
 
 ## Details
