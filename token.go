@@ -13,13 +13,8 @@ type Token struct {
 const (
 	TEndOfFile TokenType = iota
 	TComment
-	TVersionInformation
-	TWellInformation
-	TCurveInformation
-	TASCIILogData
-	TParameterInformation
-	TOther
-	TSectionCustom
+	TSection
+	TSectionASCIILogs
 	TMnemonic
 	TUnits
 	TData

@@ -8,8 +8,8 @@ func handleBegin(lexer *Lexer) HandlerFunc {
 		return handleSection
 	} else if lexer.char == '#' {
 		return handleComment
-	} else if lexer.char == '.' {
-		return handleMnemonic
+	} else if lexer.char == '\n' {
+		return handleLine
 	} else {
 		lexer.step()
 		return handleBegin
@@ -22,40 +22,35 @@ func handleSection(lexer *Lexer) HandlerFunc {
 		panic(fmt.Errorf("invalid las file section : tilde not first character on line : line %d : position %d", lexer.line+1, lexer.position))
 	}
 
-	var t TokenType
 	var s string
+	var t = TSection
+	var h = handleMnemonic
 	lexer.step()
 
 	switch lexer.char {
 	case 'V':
 		s = "Version Information"
-		t = TVersionInformation
 	case 'W':
 		s = "Well Information"
-		t = TWellInformation
 	case 'C':
 		s = "Curve Information"
-		t = TCurveInformation
 	case 'A':
-		s = "ASCII Logs"
-		t = TASCIILogData
+		t = TSectionASCIILogs
+		h = handleASCIILogs
 	case 'P':
 		s = "Parameter Information"
-		t = TParameterInformation
 	case 'O':
 		s = "Other Information"
-		t = TOther
-	default:
-		t = TSectionCustom
 	}
 
 	lexer.stepUntil('\n')
-	// If not custom section, use hard coded string as name
-	if t != TSectionCustom && s != "" {
+	// If a regular header section (non ascii log data)
+	if t == TSection {
 		lexer.overwriteBuffer(s)
 	}
+
 	lexer.emit(t)
-	return handleMnemonic
+	return h
 }
 
 // handleComment lexes a comment within a line
@@ -85,17 +80,45 @@ func handleUnits(lexer *Lexer) HandlerFunc {
 	}
 	lexer.truncate()
 	lexer.emit(TUnits)
-	return handleLineData
+	return handleData
 }
 
 // handleLineData lexes data within a non-ascii log data line
-func handleLineData(lexer *Lexer) HandlerFunc {
+func handleData(lexer *Lexer) HandlerFunc {
 	for lexer.char != ':' {
 		lexer.step()
 	}
 	lexer.truncate()
 	lexer.emit(TData)
 	return handleDescription
+}
+
+func handleASCIILogs(lexer *Lexer) HandlerFunc {
+	for {
+		lexer.step()
+		if lexer.char == '~' {
+			return handleSection
+		}
+		if lexer.char == -1 {
+			lexer.emit(TEndOfFile)
+			return nil
+		}
+		// code to split row string (lexer.buffer) into string slice
+	}
+}
+
+func handleLine(lexer *Lexer) HandlerFunc {
+	for {
+		lexer.step()
+		switch lexer.char {
+		case '.':
+			lexer.emit(TMnemonic)
+			return handleUnits
+		case '#':
+			lexer.emit(TComment)
+			return handleComment
+		}
+	}
 }
 
 // handleDescription lexes a description within a non-ascii log data line

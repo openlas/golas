@@ -24,12 +24,12 @@ func Parse(r io.Reader) *LAS {
 		}
 
 		switch token.Type {
-		case TVersionInformation, TWellInformation, TCurveInformation, TParameterInformation, TOther, TSectionCustom:
+		case TSection:
 			if section != nil {
 				las.Sections = append(las.Sections, *section)
 			}
 			section = &Section{Name: token.Value}
-		case TASCIILogData:
+		case TSectionASCIILogs:
 			lexASCIILogs(&lexer, las)
 		case TMnemonic:
 			line = Line{Mnem: token.Value}
