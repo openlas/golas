@@ -31,20 +31,19 @@ func handleSection(lexer *Lexer) HandlerFunc {
 
 	switch lexer.char {
 	case 'A':
-		lexer.count["a"]++ // Keeps track of required sections count
-		// When dealing with ASCII Log section we don't care about anything after the ~A on the same line
+		lexer.validateSection("a")
 		lexer.stepUntil('\n')
 		lexer.buffer.Reset()
 		t = TSectionLogs
 		h = handleLogs
 	case 'V':
-		lexer.count["v"]++ // Keeps track of required sections count
+		lexer.validateSection("v")
 		s = "Version Information"
 	case 'W':
-		lexer.count["w"]++ // Keeps track of required sections count
+		lexer.validateSection("w")
 		s = "Well Information"
 	case 'C':
-		lexer.count["c"]++ // Keeps track of required sections count
+		lexer.validateSection("c")
 		s = "Curve Information"
 	case 'P':
 		s = "Parameter Information"

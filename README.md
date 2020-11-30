@@ -2,20 +2,16 @@
 
 ![Build](https://github.com/openlas/golas/workflows/Build/badge.svg)
 
-## Supported LAS Versions
-
-- [2.0](http://www.cwls.org/wp-content/uploads/2014/09/LAS_20_Update_Jan2014.pdf)
+Currently, we only support the [LAS 2.0 standard](http://www.cwls.org/wp-content/uploads/2014/09/LAS_20_Update_Jan2014.pdf).
 
 ## Details
 
-- Contains both a lexer & parser
-- Self contained
-  - Uses stdlib only, no third party libraries
-- Easily marshal `las` data to `json`/`yaml`
-- Fast, memory conscience, limited allocations
-- We step through .las files one character (rune) at a time
-- We fill a buffer with necessary data instead of indexing into an already loaded string
-  - Buffer is reset after each line
+- Uses stdlib only, no third party libraries
+- Easily marshal `las` data into `json`/`yaml`
+- Since .las files can be massive, **we do not read the entire file into memory before lexing/parsing**
+  - Data is read one rune at a time
+  - We fill a buffer, **which is reset after each line**, with necessary data as opposed to slicing into an existing string from memory
+  - Therefore, the "maximum" amount of data our lexer keeps in memory at any given time is a single line's worth
 
 ---
 

@@ -3,6 +3,7 @@ package golas
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 )
 
@@ -103,4 +104,11 @@ Loop:
 // truncate our buffer by 1. If our buffer were a string, this removes the last character
 func (l *Lexer) truncate() {
 	l.buffer.Truncate(l.buffer.Len() - 1)
+}
+
+func (l *Lexer) validateSection(s string) {
+	if l.count[s] >= 1 {
+		panic(fmt.Errorf("invalid las file : expected 1 got %d of section %s : line %d : position %d", l.count[s]+1, s, l.line+1, l.position))
+	}
+	l.count[s]++
 }
