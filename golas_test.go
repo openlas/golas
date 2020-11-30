@@ -11,6 +11,8 @@ func TestHelloWorld(t *testing.T) {
 	lasReader, _ := os.Open("samples/unwrapped.las")
 	las := Parse(lasReader)
 	prettyPrintStructAsJSON(las)
+	fmt.Println("\nversion :", las.Version())
+	fmt.Println("wrap :", las.Wrap())
 }
 
 func BenchmarkTest(b *testing.B) {

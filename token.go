@@ -15,7 +15,7 @@ const (
 	TComment
 	TSection
 	TSectionCustom
-	TSectionASCIILogs
+	TSectionLogs
 	TMnemonic
 	TUnits
 	TData

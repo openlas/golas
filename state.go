@@ -31,16 +31,20 @@ func handleSection(lexer *Lexer) HandlerFunc {
 
 	switch lexer.char {
 	case 'A':
+		lexer.count["a"]++ // Keeps track of required sections count
 		// When dealing with ASCII Log section we don't care about anything after the ~A on the same line
 		lexer.stepUntil('\n')
 		lexer.buffer.Reset()
-		t = TSectionASCIILogs
-		h = handleASCIILogs
+		t = TSectionLogs
+		h = handleLogs
 	case 'V':
+		lexer.count["v"]++ // Keeps track of required sections count
 		s = "Version Information"
 	case 'W':
+		lexer.count["w"]++ // Keeps track of required sections count
 		s = "Well Information"
 	case 'C':
+		lexer.count["c"]++ // Keeps track of required sections count
 		s = "Curve Information"
 	case 'P':
 		s = "Parameter Information"
@@ -52,7 +56,6 @@ func handleSection(lexer *Lexer) HandlerFunc {
 
 	lexer.stepUntil('\n')
 	if t == TSection {
-		// Only overwrite buffer is using a reserved section (not a custom section or ASCII log section)
 		lexer.overwriteBuffer(s)
 	}
 	lexer.emit(t)
@@ -61,9 +64,7 @@ func handleSection(lexer *Lexer) HandlerFunc {
 
 // handleComment lexes a comment within a line
 func handleComment(lexer *Lexer) HandlerFunc {
-	for lexer.char != '\n' {
-		lexer.step()
-	}
+	lexer.stepUntil('\n')
 	lexer.emit(TComment)
 	return handleBegin
 }
@@ -81,9 +82,7 @@ func handleMnemonic(lexer *Lexer) HandlerFunc {
 
 // handleUnits lexes units within a non-ascii log data line
 func handleUnits(lexer *Lexer) HandlerFunc {
-	for lexer.char != ' ' {
-		lexer.step()
-	}
+	lexer.stepUntil(' ')
 	lexer.truncate()
 	lexer.emit(TUnits)
 	return handleData
@@ -91,43 +90,37 @@ func handleUnits(lexer *Lexer) HandlerFunc {
 
 // handleLineData lexes data within a non-ascii log data line
 func handleData(lexer *Lexer) HandlerFunc {
-	for lexer.char != ':' {
-		lexer.step()
-	}
+	lexer.stepUntil(':')
 	lexer.truncate()
 	lexer.emit(TData)
 	return handleDescription
 }
 
-func handleASCIILogs(lexer *Lexer) HandlerFunc {
-	// Step once more to see if we should continue reading ASCII log data or not
+// handleLogs lexes ASCII logs section
+func handleLogs(lexer *Lexer) HandlerFunc {
 	lexer.step()
 	switch lexer.char {
-	case '~':
-		return handleSection
-	case '#':
-		return handleComment
+	case '~', '#':
+		panic(fmt.Errorf("invalid las file : ascii logs must be the last section : found data after logs : line %d", lexer.line+1))
 	case -1:
 		lexer.emit(TEndOfFile)
 		return nil
 	default:
-		// Step until new line as this will fill our buffer
-		// with the value of said line. After emitting the line as Token.Value
-		// we clear the buffer to save on resources.
-		lexer.stepUntil('\n')
-		lexer.emit(TSectionASCIILogs)
-		return handleASCIILogs
+		lexer.stepUntil('\n', -1)
+		if lexer.char == -1 {
+			lexer.truncate()
+		}
+		lexer.emit(TSectionLogs)
+		return handleLogs
 	}
 }
 
 // handleDescription lexes a description within a non-ascii log data line
 func handleDescription(lexer *Lexer) HandlerFunc {
-	for lexer.char != '\n' {
-		if lexer.char == -1 {
-			lexer.emit(TDescription)
-			return nil
-		}
-		lexer.step()
+	lexer.stepUntil('\n', -1)
+	if lexer.char == -1 {
+		lexer.emit(TDescription)
+		return nil
 	}
 	lexer.emit(TDescription)
 	return handleBegin

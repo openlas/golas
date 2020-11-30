@@ -76,7 +76,7 @@ func (las *LAS) ParameterInformation() Section {
 }
 
 // Wrap returns whether or not the las file is wrapped
-func (las *LAS) Wrap() Line {
+func (las *LAS) Wrap() string {
 	var l Line
 	vi := las.VersionInformation()
 	for i := 0; i < len(vi.Lines); i++ {
@@ -85,11 +85,11 @@ func (las *LAS) Wrap() Line {
 			break
 		}
 	}
-	return l
+	return l.Data
 }
 
 // Version returns whether or not the las file is wrapped
-func (las *LAS) Version() Line {
+func (las *LAS) Version() string {
 	var l Line
 	vi := las.VersionInformation()
 	for i := 0; i < len(vi.Lines); i++ {
@@ -98,7 +98,7 @@ func (las *LAS) Version() Line {
 			break
 		}
 	}
-	return l
+	return l.Data
 }
 
 func (las *LAS) findSection(sectionName string) *Section {

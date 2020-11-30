@@ -13,6 +13,7 @@ type HandlerFunc func(*Lexer) HandlerFunc
 type Lexer struct {
 	buffer   *bytes.Buffer
 	char     rune
+	count    map[string]int
 	dots     int
 	handler  HandlerFunc
 	line     int
@@ -27,6 +28,7 @@ func NewLexer(r io.Reader) Lexer {
 		reader: bufio.NewReader(r),
 		tokens: make(chan Token, 3),
 		buffer: &bytes.Buffer{},
+		count:  map[string]int{"a": 0, "v": 0, "w": 0, "c": 0},
 	}
 }
 
@@ -38,8 +40,8 @@ func (l *Lexer) NextToken() Token {
 			return token
 		default:
 			if l.handler == nil {
-				return Token{Type: TEndOfFile}
-				// panic("lexer not started : lexer.handler is nil : did you forget to call `lexer.Start(...)`?")
+				// return Token{Type: TEndOfFile}
+				panic("lexer not started : lexer.handler is nil : did you forget to call `lexer.Start(...)`?")
 			}
 			l.handler = l.handler(l)
 		}

@@ -28,12 +28,12 @@ func Parse(r io.Reader) *LAS {
 				las.Sections = append(las.Sections, *section)
 			}
 			return las
-		case TSection, TSectionCustom, TSectionASCIILogs:
+		case TSection, TSectionCustom, TSectionLogs:
 			if section != nil {
 				las.Sections = append(las.Sections, *section)
 				section = nil
 			}
-			if token.Type == TSectionASCIILogs {
+			if token.Type == TSectionLogs {
 				las.Logs = append(las.Logs, strings.Fields(strings.TrimSpace(token.Value)))
 			} else {
 				section = &Section{Name: token.Value}
