@@ -33,7 +33,7 @@ import (
 
 func main() {
         lasReader, _ := os.Open("samples/unwrapped.las")
-        las := Parse(lasReader)
+        las := golas.Parse(lasReader)
         fmt.Printf("version : %s\n", las.Version())
         fmt.Printf("wrap : %s\n\n", las.Wrap())
 	prettyPrintStructAsJSON(las)
