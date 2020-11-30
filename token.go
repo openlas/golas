@@ -14,6 +14,7 @@ const (
 	TEndOfFile TokenType = iota
 	TComment
 	TSection
+	TSectionCustom
 	TSectionASCIILogs
 	TMnemonic
 	TUnits

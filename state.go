@@ -1,16 +1,19 @@
 package golas
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // handleBegin is a state function
 func handleBegin(lexer *Lexer) HandlerFunc {
-	if lexer.char == '~' {
+	switch lexer.char {
+	case '~':
 		return handleSection
-	} else if lexer.char == '#' {
+	case '#':
 		return handleComment
-	} else if lexer.char == '\n' {
-		return handleLine
-	} else {
+	case '.':
+		return handleMnemonic
+	default:
 		lexer.step()
 		return handleBegin
 	}
@@ -21,34 +24,37 @@ func handleSection(lexer *Lexer) HandlerFunc {
 	if lexer.position != 1 {
 		panic(fmt.Errorf("invalid las file section : tilde not first character on line : line %d : position %d", lexer.line+1, lexer.position))
 	}
-
 	var s string
 	var t = TSection
 	var h = handleMnemonic
 	lexer.step()
 
 	switch lexer.char {
+	case 'A':
+		// When dealing with ASCII Log section we don't care about anything after the ~A on the same line
+		lexer.stepUntil('\n')
+		lexer.buffer.Reset()
+		t = TSectionASCIILogs
+		h = handleASCIILogs
 	case 'V':
 		s = "Version Information"
 	case 'W':
 		s = "Well Information"
 	case 'C':
 		s = "Curve Information"
-	case 'A':
-		t = TSectionASCIILogs
-		h = handleASCIILogs
 	case 'P':
 		s = "Parameter Information"
 	case 'O':
 		s = "Other Information"
+	default:
+		t = TSectionCustom
 	}
 
 	lexer.stepUntil('\n')
-	// If a regular header section (non ascii log data)
 	if t == TSection {
+		// Only overwrite buffer is using a reserved section (not a custom section or ASCII log section)
 		lexer.overwriteBuffer(s)
 	}
-
 	lexer.emit(t)
 	return h
 }
@@ -64,7 +70,7 @@ func handleComment(lexer *Lexer) HandlerFunc {
 
 // handleMnemonic lexes a mnemonic within a non-ascii log data line
 func handleMnemonic(lexer *Lexer) HandlerFunc {
-	// Mnemonic only valid if it is the first dot on a line
+	// Mnemonic ends at the first dot (period) on a line
 	if lexer.dots == 1 {
 		lexer.truncate()
 		lexer.emit(TMnemonic)
@@ -94,42 +100,35 @@ func handleData(lexer *Lexer) HandlerFunc {
 }
 
 func handleASCIILogs(lexer *Lexer) HandlerFunc {
-	for {
-		lexer.step()
-		if lexer.char == '~' {
-			return handleSection
-		}
-		if lexer.char == -1 {
-			lexer.emit(TEndOfFile)
-			return nil
-		}
-		// code to split row string (lexer.buffer) into string slice
-	}
-}
-
-func handleLine(lexer *Lexer) HandlerFunc {
-	for {
-		lexer.step()
-		switch lexer.char {
-		case '.':
-			lexer.emit(TMnemonic)
-			return handleUnits
-		case '#':
-			lexer.emit(TComment)
-			return handleComment
-		}
+	// Step once more to see if we should continue reading ASCII log data or not
+	lexer.step()
+	switch lexer.char {
+	case '~':
+		return handleSection
+	case '#':
+		return handleComment
+	case -1:
+		lexer.emit(TEndOfFile)
+		return nil
+	default:
+		// Step until new line as this will fill our buffer
+		// with the value of said line. After emitting the line as Token.Value
+		// we clear the buffer to save on resources.
+		lexer.stepUntil('\n')
+		lexer.emit(TSectionASCIILogs)
+		return handleASCIILogs
 	}
 }
 
 // handleDescription lexes a description within a non-ascii log data line
 func handleDescription(lexer *Lexer) HandlerFunc {
 	for lexer.char != '\n' {
+		if lexer.char == -1 {
+			lexer.emit(TDescription)
+			return nil
+		}
 		lexer.step()
 	}
 	lexer.emit(TDescription)
 	return handleBegin
 }
-
-//func handleASCIILogData(lexer *Lexer) HandlerFunc {
-//
-//}

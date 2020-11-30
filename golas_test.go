@@ -8,9 +8,9 @@ import (
 )
 
 func TestHelloWorld(t *testing.T) {
-	lasReader, _ := os.Open("samples/1.las")
-	_ = Parse(lasReader)
-	// prettyPrintStructAsJSON(las)
+	lasReader, _ := os.Open("samples/unwrapped.las")
+	las := Parse(lasReader)
+	prettyPrintStructAsJSON(las)
 }
 
 func BenchmarkTest(b *testing.B) {
