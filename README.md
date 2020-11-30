@@ -32,10 +32,10 @@ import (
 
 func main() {
 	lasReader, _ := os.Open("samples/unwrapped.las")
-	las := Parse(lasReader)
+    las := Parse(lasReader)
+    fmt.Printf("version : %s\n", las.Version())
+    fmt.Printf("wrap : %s\n\n", las.Wrap())
 	prettyPrintStructAsJSON(las)
-	fmt.Println("version :", las.Version())
-	fmt.Println("wrap :", las.Wrap())
 }
 
 func prettyPrintStructAsJSON(v interface{}) {
@@ -50,6 +50,9 @@ func prettyPrintStructAsJSON(v interface{}) {
 Which gives us...
 
 ```
+version : 2.0
+wrap : NO
+
 {
     "Sections": [
         {
@@ -402,7 +405,4 @@ Which gives us...
         ]
     ]
 }
-
-version : 2.0
-wrap : NO
 ```

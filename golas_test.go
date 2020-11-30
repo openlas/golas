@@ -10,9 +10,9 @@ import (
 func TestHelloWorld(t *testing.T) {
 	lasReader, _ := os.Open("samples/unwrapped.las")
 	las := Parse(lasReader)
+	fmt.Printf("version : %s\n", las.Version())
+	fmt.Printf("wrap : %s\n\n", las.Wrap())
 	prettyPrintStructAsJSON(las)
-	fmt.Println("\nversion :", las.Version())
-	fmt.Println("wrap :", las.Wrap())
 }
 
 func BenchmarkTest(b *testing.B) {
