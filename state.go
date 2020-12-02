@@ -4,18 +4,16 @@ import (
 	"fmt"
 )
 
-// handleBegin is a state function
-func handleBegin(lexer *Lexer) HandlerFunc {
+// handleEntry is a state function
+func handleEntry(lexer *Lexer) HandlerFunc {
+	lexer.step()
 	switch lexer.char {
 	case '~':
 		return handleSection
 	case '#':
 		return handleComment
-	case '.':
-		return handleMnemonic
 	default:
-		lexer.step()
-		return handleBegin
+		panic("unknown first character")
 	}
 }
 
@@ -24,9 +22,7 @@ func handleSection(lexer *Lexer) HandlerFunc {
 	if lexer.position != 1 {
 		panic(fmt.Errorf("invalid las file section : tilde not first character on line : line %d : position %d", lexer.line+1, lexer.position))
 	}
-	var s string
-	var t = TSection
-	var h = handleMnemonic
+
 	lexer.step()
 
 	switch lexer.char {
@@ -34,49 +30,44 @@ func handleSection(lexer *Lexer) HandlerFunc {
 		lexer.validateSection("a")
 		lexer.stepUntil('\n')
 		lexer.buffer.Reset()
-		t = TSectionLogs
-		h = handleLogs
+		lexer.emit(TSectionLogs)
+		return handleLogs
 	case 'V':
 		lexer.validateSection("v")
-		s = "Version Information"
+		lexer.overwriteBuffer("Version Information")
 	case 'W':
 		lexer.validateSection("w")
-		s = "Well Information"
+		lexer.overwriteBuffer("Well Information")
 	case 'C':
 		lexer.validateSection("c")
-		s = "Curve Information"
+		lexer.overwriteBuffer("Curve Information")
 	case 'P':
-		s = "Parameter Information"
+		lexer.overwriteBuffer("Parameter Information")
 	case 'O':
-		s = "Other Information"
+		lexer.overwriteBuffer("Other Information")
 	default:
-		t = TSectionCustom
+		// TODO : prob a better way to do this for custom sections
+		lexer.stepUntil('\n')
 	}
 
+	lexer.emit(TSection)
 	lexer.stepUntil('\n')
-	if t == TSection {
-		lexer.overwriteBuffer(s)
-	}
-	lexer.emit(t)
-	return h
+	return getNextHandler(lexer)
 }
 
 // handleComment lexes a comment within a line
 func handleComment(lexer *Lexer) HandlerFunc {
 	lexer.stepUntil('\n')
 	lexer.emit(TComment)
-	return handleBegin
+	return getNextHandler(lexer)
 }
 
 // handleMnemonic lexes a mnemonic within a non-ascii log data line
 func handleMnemonic(lexer *Lexer) HandlerFunc {
-	// Mnemonic ends at the first dot (period) on a line
-	if lexer.dots == 1 {
-		lexer.truncate()
-		lexer.emit(TMnemonic)
-		return handleUnits
-	}
-	return handleBegin
+	lexer.stepUntil('.')
+	lexer.truncate()
+	lexer.emit(TMnemonic)
+	return handleUnits
 }
 
 // handleUnits lexes units within a non-ascii log data line
@@ -117,10 +108,26 @@ func handleLogs(lexer *Lexer) HandlerFunc {
 // handleDescription lexes a description within a non-ascii log data line
 func handleDescription(lexer *Lexer) HandlerFunc {
 	lexer.stepUntil('\n', -1)
-	if lexer.char == -1 {
-		lexer.emit(TDescription)
-		return nil
-	}
 	lexer.emit(TDescription)
-	return handleBegin
+	return getNextHandler(lexer)
+}
+
+func getNextHandler(lexer *Lexer) HandlerFunc {
+	if lexer.char != '\n' {
+		// Make sure we are at the end of the line
+		lexer.stepUntil('\n', -1)
+	}
+
+	switch lexer.peekNext() {
+	case -1:
+		return nil
+	case '#':
+		lexer.step()
+		return handleComment
+	case '~':
+		lexer.step()
+		return handleSection
+	default:
+		return handleMnemonic
+	}
 }

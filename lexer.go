@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"unicode/utf8"
 )
 
 // HandlerFunc func used as lexer state
@@ -66,16 +67,32 @@ func (l *Lexer) overwriteBuffer(s string) {
 	l.buffer.WriteString(s)
 }
 
+func (l *Lexer) peekNext() rune {
+	r, e := l.reader.Peek(1)
+	if e != nil {
+		return -1
+	}
+	rr, _ := utf8.DecodeRune(r)
+	return rr
+}
+
+func (l *Lexer) read() rune {
+	r, _, e := l.reader.ReadRune()
+	if e != nil {
+		r = -1 // Use -1 to signal EOF
+	}
+	return r
+}
+
 // step consumes the next rune from our reader
 func (l *Lexer) step() {
-	ch, _, err := l.reader.ReadRune()
-	if err != nil {
-		ch = -1 // Use -1 to signal EOF
-	}
-	// If no error, increment position before moving on
-	l.position++
+	char := l.read()
 
-	switch ch {
+	l.position++
+	l.buffer.WriteRune(char)
+	l.char = char
+
+	switch char {
 	case '\n':
 		l.line++
 		l.position = 0
@@ -83,9 +100,6 @@ func (l *Lexer) step() {
 	case '.':
 		l.dots = l.dots + 1
 	}
-
-	l.buffer.WriteRune(ch)
-	l.char = ch
 }
 
 // stepUntil reads from current line position until we read one of the specified runes

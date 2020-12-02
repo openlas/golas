@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestHelloWorld(t *testing.T) {
+	s := time.Now()
 	lasReader, _ := os.Open("samples/unwrapped.las")
-	las := Parse(lasReader)
-	fmt.Printf("version : %s\n", las.Version())
-	fmt.Printf("wrap : %s\n\n", las.Wrap())
-	prettyPrintStructAsJSON(las)
+	p := Parse(lasReader)
+	fmt.Printf("took %ss\n", time.Since(s))
+	prettyPrintStructAsJSON(p)
 }
 
 func BenchmarkTest(b *testing.B) {
