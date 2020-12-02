@@ -7,7 +7,7 @@ Currently, we only support the [LAS 2.0 standard](http://www.cwls.org/wp-content
 ## Details
 
 - Uses stdlib only, no third party libraries
-- Easily marshal `las` data into `json`/`yaml`
+- Easily unmarshal `las` data into `json`/`yaml`
 - Since .las files can be massive, **we do not read the entire file into memory before lexing/parsing**
   - Data is read one rune at a time
   - We fill a buffer, **which is reset after each line**, with necessary data as opposed to slicing into an existing string from memory
