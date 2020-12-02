@@ -3,9 +3,7 @@ package golas
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
-	"unicode/utf8"
 )
 
 // HandlerFunc func used as lexer state
@@ -30,7 +28,6 @@ func NewLexer(r io.Reader) Lexer {
 		reader: bufio.NewReader(r),
 		tokens: make(chan Token, 3),
 		buffer: &bytes.Buffer{},
-		count:  map[string]int{"a": 0, "v": 0, "w": 0, "c": 0},
 	}
 }
 
@@ -42,7 +39,6 @@ func (l *Lexer) NextToken() Token {
 			return token
 		default:
 			if l.handler == nil {
-				// return Token{Type: TEndOfFile}
 				panic("lexer not started : lexer.handler is nil : did you forget to call `lexer.Start(...)`?")
 			}
 			l.handler = l.handler(l)
@@ -65,15 +61,6 @@ func (l *Lexer) emit(t TokenType) {
 func (l *Lexer) overwriteBuffer(s string) {
 	l.buffer.Reset()
 	l.buffer.WriteString(s)
-}
-
-func (l *Lexer) peekNext() rune {
-	r, e := l.reader.Peek(1)
-	if e != nil {
-		return -1
-	}
-	rr, _ := utf8.DecodeRune(r)
-	return rr
 }
 
 func (l *Lexer) read() rune {
@@ -118,11 +105,4 @@ Loop:
 // truncate our buffer by 1. If our buffer were a string, this removes the last character
 func (l *Lexer) truncate() {
 	l.buffer.Truncate(l.buffer.Len() - 1)
-}
-
-func (l *Lexer) validateSection(s string) {
-	if l.count[s] >= 1 {
-		panic(fmt.Errorf("invalid las file : expected 1 got %d of section %s : line %d : position %d", l.count[s]+1, s, l.line+1, l.position))
-	}
-	l.count[s]++
 }

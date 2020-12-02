@@ -4,65 +4,119 @@ import (
 	"fmt"
 )
 
-// handleEntry is a state function
+// handleEntry is used as the start of our HandlerFunc chain
 func handleEntry(lexer *Lexer) HandlerFunc {
 	lexer.step()
-	switch lexer.char {
-	case '~':
+	if lexer.char == '~' {
 		return handleSection
+	} else if lexer.char == '#' {
+		return handleComment
+	}
+	panic("unknown first character : " + string(lexer.char))
+}
+
+// HandleNext ensures we are at the start of a line, then figures out which handler to run from there.
+func handleNext(lexer *Lexer) HandlerFunc {
+	if lexer.char != '\n' {
+		// Make sure we are at the end of the line before continuing
+		lexer.stepUntil('\n', -1)
+	}
+	lexer.step()
+	switch lexer.char {
+	case -1:
+		return nil
 	case '#':
 		return handleComment
+	case '~':
+		return handleSection
 	default:
-		panic("unknown first character")
+		return handleMnemonic
 	}
 }
 
-// handleSection lexes a section
+// handleSection figures out what type of section we have and which handler to run
 func handleSection(lexer *Lexer) HandlerFunc {
 	if lexer.position != 1 {
-		panic(fmt.Errorf("invalid las file section : tilde not first character on line : line %d : position %d", lexer.line+1, lexer.position))
+		panic(fmt.Errorf("invalid section : char '~' not first : line %d : position %d", lexer.line+1, lexer.position))
 	}
-
 	lexer.step()
-
 	switch lexer.char {
-	case 'A':
-		lexer.validateSection("a")
-		lexer.stepUntil('\n')
-		lexer.buffer.Reset()
-		lexer.emit(TSectionLogs)
-		return handleLogs
-	case 'V':
-		lexer.validateSection("v")
-		lexer.overwriteBuffer("Version Information")
-	case 'W':
-		lexer.validateSection("w")
-		lexer.overwriteBuffer("Well Information")
-	case 'C':
-		lexer.validateSection("c")
-		lexer.overwriteBuffer("Curve Information")
-	case 'P':
-		lexer.overwriteBuffer("Parameter Information")
-	case 'O':
-		lexer.overwriteBuffer("Other Information")
+	case 'V', 'W', 'C', 'A':
+		return handleRequiredSection
+	case 'P', 'O':
+		return handleOptionalSection
 	default:
-		// TODO : prob a better way to do this for custom sections
-		lexer.stepUntil('\n')
+		return handleCustomSection
 	}
-
-	lexer.emit(TSection)
-	lexer.stepUntil('\n')
-	return getNextHandler(lexer)
 }
 
-// handleComment lexes a comment within a line
+// handleLogsSection initiates lexing ASCII logs.
+func handleLogsSection(lexer *Lexer) HandlerFunc {
+	if lexer.char == 'A' {
+		lexer.stepUntil('\n')
+		// We don't care about line 0 (the line with ~A)
+		lexer.buffer.Reset()
+		lexer.emit(TSectionLogs)
+		return handleLogsDataLine
+	}
+	panic(fmt.Errorf("expected 'A' : got '%s'", string(lexer.char)))
+}
+
+// handleCustomSection lexes any custom sections a las file may contain.
+// The LAS 2.0 standard allows for custom sections, so long they do not start with a reserved char.
+func handleCustomSection(lexer *Lexer) HandlerFunc {
+	lexer.stepUntil('\n')
+	return handleNext
+}
+
+// handleOptionalSection lexes any optional sections a las file may contain
+// Since the LAS 2.0 standard does not require these sections, but does reserve the characters,
+// we don't need to make sure our las file contains them.
+func handleOptionalSection(lexer *Lexer) HandlerFunc {
+	var name string
+	switch lexer.char {
+	case 'P':
+		name = "Parameter Information"
+	case 'O':
+		name = "Optional Information"
+	default:
+		panic("unrecognized optinal section")
+	}
+	lexer.stepUntil('\n')
+	lexer.overwriteBuffer(name)
+	lexer.emit(TSection)
+	return handleNext
+}
+
+// handleRequiredSection lexes required sections as defined by the LAS standard.
+func handleRequiredSection(lexer *Lexer) HandlerFunc {
+	var name string
+	switch lexer.char {
+	case 'A':
+		return handleLogsSection
+	case 'V':
+		name = "Version Information"
+	case 'W':
+		name = "Well Information"
+	case 'C':
+		name = "Curve Information"
+	default:
+		panic("unrecognized required section")
+	}
+	lexer.stepUntil('\n')
+	lexer.overwriteBuffer(name)
+	lexer.emit(TSection)
+	return handleNext
+}
+
+// handleComment lexes comments.
 func handleComment(lexer *Lexer) HandlerFunc {
 	lexer.stepUntil('\n')
 	lexer.emit(TComment)
-	return getNextHandler(lexer)
+	return handleNext
 }
 
-// handleMnemonic lexes a mnemonic within a non-ascii log data line
+// handleMnemonic lexes the mnemonic within a non-ascii log data line
 func handleMnemonic(lexer *Lexer) HandlerFunc {
 	lexer.stepUntil('.')
 	lexer.truncate()
@@ -70,7 +124,7 @@ func handleMnemonic(lexer *Lexer) HandlerFunc {
 	return handleUnits
 }
 
-// handleUnits lexes units within a non-ascii log data line
+// handleUnits lexes the units (of measurement) within a non-ascii log data line.
 func handleUnits(lexer *Lexer) HandlerFunc {
 	lexer.stepUntil(' ')
 	lexer.truncate()
@@ -78,7 +132,7 @@ func handleUnits(lexer *Lexer) HandlerFunc {
 	return handleData
 }
 
-// handleLineData lexes data within a non-ascii log data line
+// handleLineData lexes the data within a non-ascii log data line
 func handleData(lexer *Lexer) HandlerFunc {
 	lexer.stepUntil(':')
 	lexer.truncate()
@@ -86,8 +140,8 @@ func handleData(lexer *Lexer) HandlerFunc {
 	return handleDescription
 }
 
-// handleLogs lexes ASCII logs section
-func handleLogs(lexer *Lexer) HandlerFunc {
+// handleLogsDataLine lexes an ASCII log data line.
+func handleLogsDataLine(lexer *Lexer) HandlerFunc {
 	lexer.step()
 	switch lexer.char {
 	case '~', '#':
@@ -101,7 +155,7 @@ func handleLogs(lexer *Lexer) HandlerFunc {
 			lexer.truncate()
 		}
 		lexer.emit(TSectionLogs)
-		return handleLogs
+		return handleLogsDataLine
 	}
 }
 
@@ -109,25 +163,5 @@ func handleLogs(lexer *Lexer) HandlerFunc {
 func handleDescription(lexer *Lexer) HandlerFunc {
 	lexer.stepUntil('\n', -1)
 	lexer.emit(TDescription)
-	return getNextHandler(lexer)
-}
-
-func getNextHandler(lexer *Lexer) HandlerFunc {
-	if lexer.char != '\n' {
-		// Make sure we are at the end of the line
-		lexer.stepUntil('\n', -1)
-	}
-
-	switch lexer.peekNext() {
-	case -1:
-		return nil
-	case '#':
-		lexer.step()
-		return handleComment
-	case '~':
-		lexer.step()
-		return handleSection
-	default:
-		return handleMnemonic
-	}
+	return handleNext
 }
